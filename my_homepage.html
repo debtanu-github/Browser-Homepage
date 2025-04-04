@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arise - Shortcuts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Basic body styling */
+        body { font-family: 'Inter', sans-serif; background-color: #202124; color: #e8eaed; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem; padding-top: 5vh; }
+        /* Shortcut Item Styling */
+        .shortcut-item { background-color: #303134; border-radius: 0.75rem; padding: 0.5rem; text-align: center; position: relative; transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease; cursor: pointer; overflow: visible; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80px; width: 95px; box-sizing: border-box; }
+        .shortcut-item:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); background-color: #3c4043; }
+        /* Drag and Drop Styles */
+        .shortcut-item.dragging { opacity: 0.4; border: 1px dashed #8ab4f8; cursor: grabbing; transform: scale(1.02); }
+        .shortcut-item.drag-over { transform: scale(1.05); box-shadow: 0 0 10px rgba(138, 180, 248, 0.3); }
+        /* Options Button (3 dots) */
+        .shortcut-item .options-btn { position: absolute; top: 4px; right: 4px; background-color: rgba(255, 255, 255, 0.1); border-radius: 50%; padding: 3px; display: none; cursor: pointer; z-index: 15; transition: background-color 0.2s ease; }
+        .shortcut-item:hover .options-btn { display: flex; align-items: center; justify-content: center; }
+        .shortcut-item .options-btn:hover { background-color: rgba(255, 255, 255, 0.25); }
+        /* Options Menu (Dropdown) */
+        .shortcut-item .options-menu { position: absolute; top: 28px; right: 4px; background-color: #3c4043; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.4); padding: 4px 0; display: none; z-index: 20; min-width: 100px; }
+        .shortcut-item .options-menu.visible { display: block; }
+        .options-menu .menu-item { display: block; padding: 4px 10px; color: #e8eaed; font-size: 0.75rem; cursor: pointer; white-space: nowrap; text-align: left; }
+        .options-menu .menu-item:hover { background-color: rgba(255, 255, 255, 0.1); }
+        /* Icon & Text Styling */
+        .shortcut-icon-container { width: 40px; height: 40px; background-color: rgba(255, 255, 255, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 0.25rem; overflow: hidden; pointer-events: none; }
+        .shortcut-icon-container .shortcut-icon { width: 20px; height: 20px; color: #e8eaed; }
+        .shortcut-icon-container .favicon-img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; pointer-events: none; }
+        .shortcut-icon-container .fallback-icon { display: none; }
+        .shortcut-text { font-size: 0.7rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; color: #bdc1c6; margin-top: 2px; pointer-events: none; }
+        /* Search Bar Styling */
+        .search-bar { background-color: #303134; border: 1px solid #5f6368; border-radius: 9999px; padding: 0.75rem 1.5rem; display: flex; align-items: center; width: 100%; max-width: 600px; }
+        .search-bar input { background-color: transparent; border: none; outline: none; color: #e8eaed; width: 100%; margin-left: 0.75rem; }
+        /* Add Shortcut Button */
+        .add-shortcut-btn { color: #8ab4f8; border-radius: 0.75rem; padding: 0.5rem; text-align: center; cursor: pointer; transition: background-color 0.2s ease; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80px; width: 95px; border: 2px dashed #5f6368; background-color: transparent; box-sizing: border-box; }
+        .add-shortcut-btn:hover { background-color: rgba(138, 180, 248, 0.05); }
+        .add-shortcut-btn .shortcut-text { font-size: 0.7rem; margin-top: 0.5rem; color: #8ab4f8; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .add-shortcut-btn i { width: 28px; height: 28px; color: #8ab4f8; }
+        /* Title Style - Reverted Gradient */
+        .main-title { font-size: 5rem; font-weight: 600; background-image: linear-gradient(to right, #8ab4f8, #c271f6); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); margin-bottom: 1.5rem; }
+        /* Suggestions Box Styling */
+        #suggestions-box { position: absolute; left: 50%; transform: translateX(-50%); width: 100%; max-width: 600px; z-index: 20; border-top: none; border-radius: 0 0 0.5rem 0.5rem; background-color: #303134; border: 1px solid #5f6368; border-top: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .suggestion-item { padding: 0.5rem 1.5rem; cursor: pointer; font-size: 0.9rem; color: #bdc1c6; display: flex; align-items: center; }
+        .suggestion-item:hover { background-color: #3c4043; color: #e8eaed; }
+        .suggestion-item::before { content: ''; display: inline-block; width: 16px; height: 16px; margin-right: 0.75rem; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23bdc1c6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M12 8v4l4 2"/></svg>'); background-size: contain; background-repeat: no-repeat; opacity: 0.7; }
+        /* Edit Modal Styling */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 50; }
+        .modal-content { background-color: #2d2e30; padding: 1.5rem 2rem; border-radius: 0.75rem; box-shadow: 0 5px 15px rgba(0,0,0,0.5); width: 100%; max-width: 450px; }
+        .modal-content #modal-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 1.5rem; color: #e8eaed; }
+        .modal-content label { display: block; font-size: 0.8rem; color: #bdc1c6; margin-bottom: 0.25rem; }
+        .modal-content input[type="text"], .modal-content input[type="url"] { width: 100%; background-color: #3c4043; border: 1px solid #5f6368; border-radius: 4px; padding: 0.5rem 0.75rem; color: #e8eaed; font-size: 0.9rem; margin-bottom: 1rem; }
+        .modal-content input[type="text"]:focus, .modal-content input[type="url"]:focus { outline: none; border-color: #8ab4f8; box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.3); }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+        .modal-btn { padding: 0.5rem 1.25rem; border-radius: 4px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; border: none; }
+        .modal-btn-cancel { background-color: transparent; color: #8ab4f8; border: 1px solid #5f6368; }
+        .modal-btn-cancel:hover { background-color: rgba(138, 180, 248, 0.05); }
+        #modal-done-add-btn { background-color: #8ab4f8; color: #202124; }
+        #modal-done-add-btn:hover { background-color: #a1c9fa; }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto flex flex-col items-center space-y-8 w-full">
+        <h1 class="main-title">Arise</h1>
+        <div class="relative w-full max-w-xl">
+            <form id="search-form" class="w-full" action="https://www.google.com/search" method="GET">
+                <div class="search-bar mx-auto">
+                    <i data-lucide="search" class="text-gray-400 w-5 h-5"></i>
+                    <input type="text" id="search-input" name="q" placeholder="Search Google or type a URL" autocomplete="off">
+                </div>
+            </form>
+            <div id="suggestions-box" class="mt-0 shadow-lg hidden"></div>
+        </div>
+        <div id="shortcuts-grid" class="grid grid-cols-10 gap-4 w-full max-w-6xl justify-items-center">
+            <div id="add-shortcut" class="add-shortcut-btn">
+                 <i data-lucide="plus"></i>
+                 <span class="shortcut-text">Add shortcut</span>
+            </div>
+        </div>
+    </div>
+    <div id="shortcut-modal" class="modal-overlay hidden">
+         <div class="modal-content">
+            <h3 id="modal-title">Edit shortcut</h3> <div> <label for="modal-name-input">Name</label> <input type="text" id="modal-name-input"> </div>
+            <div> <label for="modal-url-input">URL</label> <input type="url" id="modal-url-input"> </div>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="modal-btn modal-btn-cancel">Cancel</button>
+                <button id="modal-done-add-btn" class="modal-btn">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const shortcutsGrid = document.getElementById('shortcuts-grid');
+        const addShortcutBtn = document.getElementById('add-shortcut');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const suggestionsBox = document.getElementById('suggestions-box');
+        const shortcutModal = document.getElementById('shortcut-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalNameInput = document.getElementById('modal-name-input');
+        const modalUrlInput = document.getElementById('modal-url-input');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalDoneAddBtn = document.getElementById('modal-done-add-btn');
+
+        // --- State ---
+        let currentlyEditingElement = null;
+        let draggedItem = null;
+
+        // --- Constants ---
+        const SHORTCUT_STORAGE_KEY = 'customHomepageShortcuts';
+        const SEARCH_HISTORY_KEY = 'customHomepageSearchHistory';
+        const MAX_SEARCH_HISTORY = 10;
+        const FAVICON_SERVICE_URL = `https://www.google.com/s2/favicons?sz=32&domain_url=`;
+
+        // ========================================================================
+        // INITIALIZATION
+        // ========================================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                attachStaticListeners();
+                loadShortcuts();
+                lucide.createIcons();
+            } catch (error) { console.error("Error during initialization:", error); }
+        });
+
+        // ========================================================================
+        // SHORTCUT HANDLING
+        // ========================================================================
+        function loadShortcuts() {
+            const shortcuts = JSON.parse(localStorage.getItem(SHORTCUT_STORAGE_KEY) || '[]');
+            const existingItems = shortcutsGrid.querySelectorAll('.shortcut-item[data-url]');
+            existingItems.forEach(item => item.remove());
+            shortcuts.forEach(createAndAppendShortcut);
+            shortcutsGrid.appendChild(addShortcutBtn);
+            addDragDropListeners();
+        }
+        function saveShortcuts(shortcuts) { localStorage.setItem(SHORTCUT_STORAGE_KEY, JSON.stringify(shortcuts)); }
+        function getCurrentShortcuts() {
+             const shortcutElements = shortcutsGrid.querySelectorAll('.shortcut-item[data-url]');
+             return Array.from(shortcutElements).map(el => ({ name: el.dataset.name, url: el.dataset.url }));
+        }
+        function createAndAppendShortcut(shortcutData) {
+            const div = document.createElement('div');
+            div.className = 'shortcut-item';
+            div.dataset.url = shortcutData.url;
+            div.dataset.name = shortcutData.name;
+            div.setAttribute('draggable', 'true');
+            div.addEventListener('click', handleShortcutClick);
+
+            const iconContainer = document.createElement('div'); iconContainer.className = 'shortcut-icon-container';
+            const fallbackIcon = document.createElement('i'); fallbackIcon.setAttribute('data-lucide', 'link-2'); fallbackIcon.classList.add('shortcut-icon', 'fallback-icon');
+            const img = document.createElement('img'); img.src = `${FAVICON_SERVICE_URL}${encodeURIComponent(shortcutData.url)}`; img.alt = `${shortcutData.name} Favicon`; img.className = 'favicon-img'; img.loading = 'lazy';
+            img.onerror = () => { img.style.display = 'none'; fallbackIcon.style.display = 'inline-block'; renderLucideIcon(fallbackIcon); };
+            img.onload = () => { fallbackIcon.style.display = 'none'; img.style.display = 'inline-block'; };
+            iconContainer.appendChild(img); iconContainer.appendChild(fallbackIcon);
+            const span = document.createElement('span'); span.className = 'shortcut-text'; span.textContent = shortcutData.name; span.title = shortcutData.name;
+            const optionsBtn = document.createElement('button'); optionsBtn.className = 'options-btn'; optionsBtn.innerHTML = '<i data-lucide="more-vertical" class="w-4 h-4 text-white pointer-events-none"></i>'; optionsBtn.title = 'Options';
+            optionsBtn.onclick = (e) => { e.stopPropagation(); toggleOptionsMenu(div); };
+            const optionsMenu = document.createElement('div'); optionsMenu.className = 'options-menu';
+            const editMenuItem = document.createElement('div'); editMenuItem.className = 'menu-item'; editMenuItem.textContent = 'Edit';
+            editMenuItem.onclick = (e) => { e.stopPropagation(); closeAllOptionMenus(); showModalForEdit(div); };
+            const removeMenuItem = document.createElement('div'); removeMenuItem.className = 'menu-item'; removeMenuItem.textContent = 'Remove';
+            removeMenuItem.onclick = (e) => { e.stopPropagation(); closeAllOptionMenus(); removeShortcut(div); };
+            optionsMenu.appendChild(editMenuItem); optionsMenu.appendChild(removeMenuItem);
+            div.appendChild(iconContainer); div.appendChild(span); div.appendChild(optionsBtn); div.appendChild(optionsMenu);
+
+            shortcutsGrid.insertBefore(div, addShortcutBtn);
+            try { lucide.createIcons({ nodes: [div] }); }
+            catch (error) { console.error("Error rendering Lucide icons for new shortcut:", error, div); }
+        }
+        function handleShortcutClick(e) {
+             const shortcutElement = this;
+             if (shortcutElement.classList.contains('dragging-ended')) { shortcutElement.classList.remove('dragging-ended'); return; }
+             if (e.target.closest('.options-btn') || e.target.closest('.options-menu')) return;
+             closeAllOptionMenus();
+             const url = shortcutElement.dataset.url;
+             if (url) { window.open(url, '_blank'); }
+        }
+        function toggleOptionsMenu(shortcutElement) {
+            const menu = shortcutElement.querySelector('.options-menu');
+            if (!menu) return;
+            const isVisible = menu.classList.contains('visible');
+            closeAllOptionMenus(shortcutElement);
+            if (!isVisible) { menu.classList.add('visible'); }
+        }
+        function closeAllOptionMenus(exceptElement = null) {
+            const allMenus = shortcutsGrid.querySelectorAll('.options-menu.visible');
+            allMenus.forEach(menu => {
+                if (!exceptElement || !menu.closest('.shortcut-item').isSameNode(exceptElement)) { menu.classList.remove('visible'); }
+            });
+        }
+        // --- MODAL HANDLING ---
+        function showModalForEdit(elementToEdit) {
+             currentlyEditingElement = elementToEdit;
+             modalTitle.textContent = 'Edit shortcut';
+             modalDoneAddBtn.textContent = 'Done';
+             modalNameInput.value = elementToEdit.dataset.name;
+             modalUrlInput.value = elementToEdit.dataset.url;
+             shortcutModal.classList.remove('hidden');
+             modalNameInput.focus();
+        }
+        function showModalForAdd() {
+            currentlyEditingElement = null;
+            modalTitle.textContent = 'Add shortcut';
+            modalDoneAddBtn.textContent = 'Add';
+            modalNameInput.value = '';
+            modalUrlInput.value = '';
+            shortcutModal.classList.remove('hidden');
+            modalNameInput.focus();
+        }
+        function hideModal() {
+             shortcutModal.classList.add('hidden');
+             currentlyEditingElement = null;
+        }
+        function handleModalSubmit() {
+            const newName = modalNameInput.value.trim();
+            let newUrl = modalUrlInput.value.trim();
+            if (!newName || !newUrl) { alert("Name and URL cannot be empty."); return; }
+            newUrl = sanitizeUrl(newUrl);
+
+            if (currentlyEditingElement) {
+                // EDIT LOGIC
+                currentlyEditingElement.dataset.name = newName; currentlyEditingElement.dataset.url = newUrl;
+                const textElement = currentlyEditingElement.querySelector('.shortcut-text');
+                if (textElement) { textElement.textContent = newName; textElement.title = newName; }
+                const imgElement = currentlyEditingElement.querySelector('.favicon-img');
+                const fallbackIconElement = currentlyEditingElement.querySelector('.fallback-icon');
+                if (imgElement && fallbackIconElement) {
+                    imgElement.style.display = 'inline-block'; fallbackIconElement.style.display = 'none';
+                    imgElement.src = `${FAVICON_SERVICE_URL}${encodeURIComponent(newUrl)}`; imgElement.alt = `${newName} Favicon`;
+                    if (fallbackIconElement.getAttribute('data-lucide-rendered') === 'true') { fallbackIconElement.removeAttribute('data-lucide-rendered'); }
+                    renderLucideIcon(fallbackIconElement);
+                }
+                saveShortcuts(getCurrentShortcuts());
+            } else {
+                // ADD LOGIC
+                const newShortcut = { name: newName, url: newUrl };
+                createAndAppendShortcut(newShortcut);
+                addDragDropListeners();
+                saveShortcuts(getCurrentShortcuts());
+            }
+            hideModal();
+        }
+        function removeShortcut(elementToRemove) {
+             if (confirm(`Remove shortcut "${elementToRemove.dataset.name}"?`)) {
+                elementToRemove.remove();
+                saveShortcuts(getCurrentShortcuts());
+            }
+         }
+        // ========================================================================
+        // DRAG AND DROP HANDLING
+        // ========================================================================
+        function addDragDropListeners() {
+            const items = shortcutsGrid.querySelectorAll(':scope > .shortcut-item[draggable="true"]');
+            items.forEach(item => {
+                item.removeEventListener('dragstart', handleDragStart); item.removeEventListener('dragend', handleDragEnd); item.removeEventListener('dragover', handleDragOver); item.removeEventListener('dragenter', handleDragEnter); item.removeEventListener('dragleave', handleDragLeave); item.removeEventListener('drop', handleDrop);
+                item.addEventListener('dragstart', handleDragStart); item.addEventListener('dragend', handleDragEnd); item.addEventListener('dragover', handleDragOver); item.addEventListener('dragenter', handleDragEnter); item.addEventListener('dragleave', handleDragLeave); item.addEventListener('drop', handleDrop);
+            });
+            shortcutsGrid.removeEventListener('dragover', handleDragOverGrid); shortcutsGrid.removeEventListener('drop', handleDropGrid);
+            shortcutsGrid.addEventListener('dragover', handleDragOverGrid); shortcutsGrid.addEventListener('drop', handleDropGrid);
+        }
+        function handleDragStart(e) {
+            if (e.target.closest('.options-btn') || e.target.closest('.options-menu')) { e.preventDefault(); return; }
+            draggedItem = this;
+            setTimeout(() => { this.classList.add('dragging'); }, 0);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.dataset.url);
+        }
+        function handleDragEnd(e) {
+            const currentItem = this;
+             setTimeout(() => { if(currentItem && currentItem.classList.contains('dragging')) { currentItem.classList.add('dragging-ended'); } }, 0);
+            if(currentItem) currentItem.classList.remove('dragging');
+            shortcutsGrid.querySelectorAll('.shortcut-item.drag-over').forEach(item => { item.classList.remove('drag-over'); });
+            draggedItem = null;
+        }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleDragEnter(e) { e.preventDefault(); if (this !== draggedItem) { this.classList.add('drag-over'); } }
+        function handleDragLeave(e) { this.classList.remove('drag-over'); }
+        function handleDrop(e) {
+            e.preventDefault(); e.stopPropagation();
+            const targetItem = this;
+            if (!draggedItem || targetItem === draggedItem) { targetItem.classList.remove('drag-over'); return; }
+            const targetRect = targetItem.getBoundingClientRect();
+            const targetMidpoint = targetRect.top + targetRect.height / 2;
+            if (e.clientY < targetMidpoint) { targetItem.parentNode.insertBefore(draggedItem, targetItem); }
+            else { targetItem.parentNode.insertBefore(draggedItem, targetItem.nextSibling); }
+            targetItem.classList.remove('drag-over');
+            saveShortcuts(getCurrentShortcuts());
+        }
+        function handleDragOverGrid(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleDropGrid(e) {
+            e.preventDefault();
+            if (e.target === shortcutsGrid && draggedItem) {
+                 shortcutsGrid.insertBefore(draggedItem, addShortcutBtn);
+                 saveShortcuts(getCurrentShortcuts());
+             }
+             shortcutsGrid.querySelectorAll('.shortcut-item.drag-over').forEach(item => { item.classList.remove('drag-over'); });
+         }
+        // ========================================================================
+        // SEARCH HANDLING & SUGGESTIONS
+        // ========================================================================
+        function loadSearchHistory() { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]'); }
+        function saveSearchHistory(history) { const recentHistory = history.slice(-MAX_SEARCH_HISTORY); localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(recentHistory)); }
+        function addSearchToHistory(query) { let history = loadSearchHistory(); history = history.filter(item => item.toLowerCase() !== query.toLowerCase()); history.push(query); saveSearchHistory(history); }
+        function showSuggestions(query) { /* ... */ }
+        function handleSearchSubmit(e) { /* ... */ }
+        // ========================================================================
+        // UTILITY FUNCTIONS
+        // ========================================================================
+        function sanitizeUrl(url) { if (!url.startsWith('http://') && !url.startsWith('https://')) { return 'https://' + url; } return url; }
+        function isUrl(text) { const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$|localhost/i; return urlPattern.test(text) || (text.includes('.') && text.includes('/')) || text.includes(':') || text.toLowerCase() === 'localhost'; }
+        function renderLucideIcon(iconElement) {
+             if (iconElement && iconElement.parentElement && !iconElement.getAttribute('data-lucide-rendered')) {
+                 try { lucide.createIcons({ nodes: [iconElement.parentElement] }); iconElement.setAttribute('data-lucide-rendered', 'true'); }
+                 catch (error) { console.error("Error rendering Lucide icon:", error, iconElement); }
+             }
+        }
+        // ========================================================================
+        // EVENT LISTENERS
+        // ========================================================================
+        function attachStaticListeners() {
+            if (addShortcutBtn) { addShortcutBtn.addEventListener('click', showModalForAdd); } else { console.error("Add shortcut button not found!"); } // Use showModalForAdd
+            if (searchForm) { searchForm.addEventListener('submit', handleSearchSubmit); } else { console.error("Search form not found!"); }
+            if (searchInput) {
+                searchInput.addEventListener('input', () => { showSuggestions(searchInput.value.trim()); });
+                searchInput.addEventListener('focus', () => { if(searchInput.value.trim().length > 0) { showSuggestions(searchInput.value.trim()); } });
+                searchInput.addEventListener('blur', () => { setTimeout(() => { if (!suggestionsBox.contains(document.activeElement)) { suggestionsBox.classList.add('hidden'); } }, 200); });
+            } else { console.error("Search input not found!"); }
+            document.addEventListener('click', (e) => {
+                if (suggestionsBox && searchForm && !searchForm.contains(e.target) && !suggestionsBox.contains(e.target)) { suggestionsBox.classList.add('hidden'); }
+                if (!e.target.closest('.options-btn') && !e.target.closest('.options-menu')) { closeAllOptionMenus(); }
+                if (shortcutModal && e.target === shortcutModal) { hideModal(); }
+            });
+            if (modalCancelBtn) { modalCancelBtn.addEventListener('click', hideModal); } else { console.error("Modal cancel button not found!"); }
+            if (modalDoneAddBtn) { modalDoneAddBtn.addEventListener('click', handleModalSubmit); } else { console.error("Modal done/add button not found!"); } // Use handleModalSubmit
+            if (modalNameInput) { modalNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleModalSubmit(); }); } else { console.error("Modal name input not found!"); }
+             if (modalUrlInput) { modalUrlInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleModalSubmit(); }); } else { console.error("Modal url input not found!"); }
+        }
+
+        // --- Function definitions omitted for brevity ---
+        // (Ensure all functions used are defined correctly as in previous versions)
+        // ... (Copy remaining functions like showSuggestions, handleSearchSubmit, etc.) ...
+        // Example: Copying showSuggestions
+        function showSuggestions(query) {
+            const history = loadSearchHistory();
+            const filteredHistory = history.filter(item => item.toLowerCase().includes(query.toLowerCase())).reverse();
+            suggestionsBox.innerHTML = '';
+            if (filteredHistory.length > 0 && query.length > 0) {
+                 filteredHistory.forEach(item => {
+                    const suggestionDiv = document.createElement('div');
+                    suggestionDiv.className = 'suggestion-item';
+                    suggestionDiv.textContent = item;
+                    suggestionDiv.onmousedown = (e) => { e.preventDefault(); searchInput.value = item; suggestionsBox.classList.add('hidden'); searchForm.requestSubmit(); };
+                    suggestionsBox.appendChild(suggestionDiv);
+                });
+                suggestionsBox.classList.remove('hidden');
+            } else {
+                suggestionsBox.classList.add('hidden');
+            }
+        }
+        // Example: Copying handleSearchSubmit
+        function handleSearchSubmit(e) {
+            e.preventDefault();
+            const query = searchInput.value.trim();
+            suggestionsBox.classList.add('hidden');
+            if (query) {
+                if (isUrl(query)) { window.location.href = sanitizeUrl(query); }
+                else { addSearchToHistory(query); searchForm.submit(); }
+            }
+        }
+
+
+    </script>
+</body>
+</html>
